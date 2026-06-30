@@ -1,0 +1,14 @@
+--- a/src/cmake/OptimalOptions.cmake
++++ b/src/cmake/OptimalOptions.cmake
+@@ -31,6 +31,11 @@
+ 
+ 	ENDIF(NV_SYSTEM_PROCESSOR STREQUAL "powerpc")
+ 
++	IF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64")
++		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=power8 -maltivec -mabi=altivec -mpowerpc64 -mvsx")
++	ENDIF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64")
++
++
+ #	IF(DARWIN)
+ #		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.5 -isysroot /Developer/SDKs/MacOSX10.5.sdk")
+ #		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=10.5 -isysroot /Developer/SDKs/MacOSX10.5.sdk")

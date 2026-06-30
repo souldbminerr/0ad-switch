@@ -1,0 +1,24 @@
+---
+name: pre-commit
+on:
+  - push
+  - pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - id: restore-pip-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: pip-cache-v1-${{ github.workflow }}
+          path: ~/.cache/pip
+      - uses: pre-commit/action@v3.0.1
+      - uses: actions/cache/save@v4
+        if: steps.restore-pip-cache.outcome == 'success'
+        with:
+          key: pip-cache-v1-${{ github.workflow }}
+          path: ~/.cache/pip

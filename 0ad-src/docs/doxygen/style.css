@@ -1,0 +1,7 @@
+html {
+    --primary-color: #9A3334;
+    --primary-dark-color: #602021;
+    --primary-light-color: #bf4042;
+    --header-background: var(--primary-color);
+    --header-foreground: #FFFFFF;
+}

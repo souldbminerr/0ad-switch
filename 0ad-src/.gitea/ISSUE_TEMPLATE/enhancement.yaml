@@ -1,0 +1,27 @@
+---
+name: Enhancement
+about: Ask us for an improvement you wish to see in the game.
+labels:
+  - "Type/Enhancement"
+  - "Priority/3: Should Have"
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **Please select a Theme label that corresponds best to your issue. You can also adjust the
+        Priority label.**
+
+  - type: textarea
+    attributes:
+      label: Description
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: >
+        **Important Note:** Gameplay and balance changes require preliminary discussion, and
+        consensus must be reached with the Balancing team.<br>
+        If this is a gameplay change, please add the *Needs Design Input* label, and open a forum
+        topic for discussing your proposal.<br>
+        You should link that forum topic in the ticket Description above.

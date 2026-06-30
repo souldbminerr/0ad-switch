@@ -1,0 +1,200 @@
+## This file documents keynames that can be used in .cfg files for specifying hotkeys
+## Note: all are case-insensitive.
+## Note: the keynames are not actually configured or implemented here
+## Note: those names map to 'scancodes', i.e. positions on a classic QWERTY keyboard.
+## The in-game hotkey editor will show you what that corresponds to.
+
+
+MouseLeft
+MouseRight
+MouseMiddle
+MouseX1
+MouseX2
+WheelUp
+WheelDown
+WheelLeft
+WheelRight
+
+A-Z
+0-9
+Return, Enter
+Break
+Escape, Esc
+Backspace
+Tab
+Space
+-, Minus
+=, Plus         ## Appears as "Equals" in-game, but "Equals" is not a recognised keyname
+[, LeftBracket
+], RightBracket
+\\, Backslash   ## You do need the escaping in the first case.
+;, Semicolon
+', Quote        ## Maps to the quote/doubleQuote key on QWERTY.
+`, BackQuote
+,, Comma
+., Period
+/, Slash
+F1
+F2
+F3
+F4
+F5
+F6
+F7
+F8
+F9
+F10
+F11
+F12
+PrintScreen
+ScrollLock
+Pause
+Insert
+Home
+PageUp
+Delete, Del
+End
+PageDown
+Right, RightArrow
+Left, LeftArrow
+Down, DownArrow
+Up, UpArrow
+Numlock
+NumPlus         ## "Keypad +" is not a recognised keyname
+Keypad /, NumDivide
+Keypad *, NumMultiply
+Keypad -, NumMinus
+Keypad =, NumEquals
+Keypad Enter, NumEnter
+Keypad 1, Num1
+Keypad 2, Num2
+Keypad 3, Num3
+Keypad 4, Num4
+Keypad 5, Num5
+Keypad 6, Num6
+Keypad 7, Num7
+Keypad 8, Num8
+Keypad 9, Num9
+Keypad 0, Num0
+Keypad ., NumDecimal
+Application
+Power
+F13
+F14
+F15
+F16
+F17
+F18
+F19
+F20
+F21
+F22
+F23
+F24
+Execute
+Help
+Menu
+Select
+Stop
+Again
+Undo
+Cut
+Copy
+Paste
+Find
+Mute
+VolumeUp
+VolumeDown
+Keypad ,
+AltErase
+SysReq
+Cancel
+Clear
+Prior
+Return
+Separator
+Out
+Oper
+Clear / Again
+CrSel
+ExSel
+Keypad 00
+Keypad 000
+ThousandsSeparator
+DecimalSeparator
+CurrencyUnit
+CurrencySubUnit
+Keypad (
+Keypad )
+Keypad {
+Keypad }
+Keypad Tab
+Keypad Backspace
+Keypad A
+Keypad B
+Keypad C
+Keypad D
+Keypad E
+Keypad F
+Keypad XOR
+Keypad ^
+Keypad %
+Keypad <
+Keypad >
+Keypad &
+Keypad &&
+Keypad |
+Keypad ||
+Keypad :
+Keypad #
+Keypad Space
+Keypad @
+Keypad !
+Keypad MemStore
+Keypad MemRecall
+Keypad MemClear
+Keypad MemAdd
+Keypad MemSubtract
+Keypad MemMultiply
+Keypad MemDivide
+Keypad +/-
+Keypad Clear
+Keypad ClearEntry
+Keypad Binary
+Keypad Octal
+Keypad Decimal
+Keypad Hexadecimal
+Left Ctrl, Ctrl
+Left Shift, Shift
+Left Alt, Alt
+Left GUI, Super
+Right Ctrl, Ctrl
+Right Shift, Shift
+Right Alt, Alt
+Right GUI, Super
+ModeSwitch
+AudioNext
+AudioPrev
+AudioStop
+AudioPlay
+AudioMute
+MediaSelect
+WWW
+Mail
+Calculator
+Computer
+AC Search
+AC Home
+AC Back
+AC Forward
+AC Stop
+AC Refresh
+AC Bookmarks
+BrightnessDown
+BrightnessUp
+DisplaySwitch
+KBDIllumToggle
+KBDIllumDown
+KBDIllumUp
+Eject
+Sleep

@@ -1,0 +1,27 @@
+From cc07839eff9be49e2c3df4e68ce18f3134caafd2 Mon Sep 17 00:00:00 2001
+From: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+Date: Sun, 27 Apr 2025 07:57:10 +0200
+Subject: [PATCH] Bump cmake min version to 3.10
+
+Cmake-4 removes support for cmake < cmake-3.5 and deprecates cmake <
+cmake-3.10
+
+Fixes: #7764
+Signed-off-by: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+---
+ src/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index b18b791..b517b52 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
++CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
+ PROJECT(NV)
+ ENABLE_TESTING()
+ 
+-- 
+2.49.0
+

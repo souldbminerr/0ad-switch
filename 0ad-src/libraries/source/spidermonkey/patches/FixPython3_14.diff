@@ -1,0 +1,45 @@
+From b1c04fc534205e978d2efa0be391d4f39bbd22de Mon Sep 17 00:00:00 2001
+From: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+Date: Fri, 10 Oct 2025 20:04:48 +0200
+Subject: [PATCH] Fixes for python 3.14
+
+Upstream fixes are incomplete but can be found at
+https://bugzilla.mozilla.org/show_bug.cgi?id=1983713
+
+Add addional fixes for reader.py
+
+Signed-off-by: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+---
+ python/mach/mach/command_util.py            | 2 +-
+ python/mozbuild/mozbuild/frontend/reader.py | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/python/mach/mach/command_util.py b/python/mach/mach/command_util.py
+index a8a7cb9018a1..a4fdd63ca947 100644
+--- a/python/mach/mach/command_util.py
++++ b/python/mach/mach/command_util.py
+@@ -289,7 +289,7 @@ class DecoratorVisitor(ast.NodeVisitor):
+             kwarg_dict = {}
+ 
+             for name, arg in zip(["command", "subcommand"], decorator.args):
+-                kwarg_dict[name] = arg.s
++                kwarg_dict[name] = arg.value
+ 
+             for keyword in decorator.keywords:
+                 if keyword.arg not in relevant_kwargs:
+diff --git a/python/mozbuild/mozbuild/frontend/reader.py b/python/mozbuild/mozbuild/frontend/reader.py
+index 5cb627b0ed7f..7ef5988d259c 100644
+--- a/python/mozbuild/mozbuild/frontend/reader.py
++++ b/python/mozbuild/mozbuild/frontend/reader.py
+@@ -470,7 +470,7 @@ class TemplateFunction(object):
+             return c(
+                 ast.Subscript(
+                     value=c(ast.Name(id=self._global_name, ctx=ast.Load())),
+-                    slice=c(ast.Index(value=c(ast.Str(s=node.id)))),
++                    slice=c(ast.Index(value=c(ast.Constant(value=node.id)))),
+                     ctx=node.ctx,
+                 )
+             )
+-- 
+2.49.1
+

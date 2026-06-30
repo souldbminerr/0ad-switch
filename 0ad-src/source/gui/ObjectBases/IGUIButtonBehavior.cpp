@@ -1,0 +1,153 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "precompiled.h"
+
+#include "IGUIButtonBehavior.h"
+
+#include "gui/CGUISprite.h"
+#include "gui/ObjectBases/IGUIObject.h"
+#include "gui/SGUIMessage.h"
+
+const CStr IGUIButtonBehavior::EventNamePress = "Press";
+const CStr IGUIButtonBehavior::EventNamePressRight = "PressRight";
+const CStr IGUIButtonBehavior::EventNamePressRightDisabled = "PressRightDisabled";
+const CStr IGUIButtonBehavior::EventNameDoublePress = "DoublePress";
+const CStr IGUIButtonBehavior::EventNameDoublePressRight = "DoublePressRight";
+const CStr IGUIButtonBehavior::EventNameRelease = "Release";
+const CStr IGUIButtonBehavior::EventNameReleaseRight = "ReleaseRight";
+
+IGUIButtonBehavior::IGUIButtonBehavior(IGUIObject& pObject)
+	: m_pObject(pObject),
+	  m_Pressed(),
+	  m_PressedRight(),
+	  m_SoundDisabled(&pObject, "sound_disabled"),
+	  m_SoundEnter(&pObject, "sound_enter"),
+	  m_SoundLeave(&pObject, "sound_leave"),
+	  m_SoundPressed(&pObject, "sound_pressed"),
+	  m_SoundReleased(&pObject, "sound_released")
+{
+}
+
+IGUIButtonBehavior::~IGUIButtonBehavior()
+{
+}
+
+void IGUIButtonBehavior::ResetStates()
+{
+	if (m_Pressed)
+	{
+		m_Pressed = false;
+		m_pObject.PlaySound(m_SoundReleased);
+		m_pObject.SendEvent(GUIM_PRESSED_MOUSE_RELEASE, EventNameRelease);
+	}
+
+	if (m_PressedRight)
+	{
+		m_PressedRight = false;
+		m_pObject.PlaySound(m_SoundReleased);
+		m_pObject.SendEvent(GUIM_PRESSED_MOUSE_RELEASE_RIGHT, EventNameReleaseRight);
+	}
+}
+
+void IGUIButtonBehavior::HandleMessage(SGUIMessage& Message)
+{
+	// TODO Gee: easier access functions
+	switch (Message.type)
+	{
+	case GUIM_MOUSE_ENTER:
+		if (m_pObject.IsEnabled())
+			m_pObject.PlaySound(m_SoundEnter);
+		break;
+
+	case GUIM_MOUSE_LEAVE:
+		if (m_pObject.IsEnabled())
+			m_pObject.PlaySound(m_SoundLeave);
+		break;
+
+	case GUIM_MOUSE_DBLCLICK_LEFT:
+		if (!m_pObject.IsEnabled())
+			break;
+
+		// Since GUIM_MOUSE_PRESS_LEFT also gets called twice in a
+		// doubleclick event, we let it handle playing sounds.
+		m_pObject.SendEvent(GUIM_DOUBLE_PRESSED, EventNameDoublePress);
+		break;
+
+	case GUIM_MOUSE_PRESS_LEFT:
+		if (!m_pObject.IsEnabled())
+		{
+			m_pObject.PlaySound(m_SoundDisabled);
+			break;
+		}
+
+		m_pObject.PlaySound(m_SoundPressed);
+		m_pObject.SendEvent(GUIM_PRESSED, EventNamePress);
+		m_Pressed = true;
+		break;
+
+	case GUIM_MOUSE_DBLCLICK_RIGHT:
+		if (!m_pObject.IsEnabled())
+			break;
+
+		// Since GUIM_MOUSE_PRESS_RIGHT also gets called twice in a
+		// doubleclick event, we let it handle playing sounds.
+		m_pObject.SendEvent(GUIM_DOUBLE_PRESSED_MOUSE_RIGHT, EventNameDoublePressRight);
+		break;
+
+	case GUIM_MOUSE_PRESS_RIGHT:
+		if (!m_pObject.IsEnabled())
+		{
+			m_pObject.SendEvent(GUIM_PRESSED_MOUSE_RIGHT_DISABLED, EventNamePressRightDisabled);
+			m_pObject.PlaySound(m_SoundDisabled);
+			break;
+		}
+
+		// Button was right-clicked
+		m_pObject.PlaySound(m_SoundPressed);
+		m_pObject.SendEvent(GUIM_PRESSED_MOUSE_RIGHT, EventNamePressRight);
+		m_PressedRight = true;
+		break;
+
+	case GUIM_MOUSE_RELEASE_RIGHT:
+		if (m_pObject.IsEnabled())
+			ResetStates();
+		break;
+
+	case GUIM_MOUSE_RELEASE_LEFT:
+		if (m_pObject.IsEnabled())
+			ResetStates();
+		break;
+
+	default:
+		break;
+	}
+}
+
+const CGUISpriteInstance& IGUIButtonBehavior::GetButtonSprite(const CGUISpriteInstance& sprite, const CGUISpriteInstance& sprite_over, const CGUISpriteInstance& sprite_pressed, const CGUISpriteInstance& sprite_disabled) const
+{
+	if (!m_pObject.IsEnabled())
+		return sprite_disabled ? sprite_disabled : sprite;
+
+	if (!m_pObject.IsMouseHovering())
+		return sprite;
+
+	if (m_Pressed)
+		return sprite_pressed ? sprite_pressed : sprite;
+
+	return sprite_over ? sprite_over : sprite;
+}

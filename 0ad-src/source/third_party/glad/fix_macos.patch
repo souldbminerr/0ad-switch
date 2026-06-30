@@ -1,0 +1,17 @@
+diff --git b/include/glad/gl.h a/include/glad/gl.h
+index 0a8db581a6..4c7c3564c3 100644
+--- b/include/glad/gl.h
++++ a/include/glad/gl.h
+@@ -1763,7 +1763,11 @@ typedef void *GLeglImageOES;
+ typedef char GLchar;
+ typedef char GLcharARB;
+ #ifdef __APPLE__
+-typedef void *GLhandleARB;
++// --- Patched by WFG
++// See https://bugs.freedesktop.org/show_bug.cgi?id=66346
++// macOS considers those to be different.
++// typedef void *GLhandleARB;
++typedef GLuint GLhandleARB;
+ #else
+ typedef unsigned int GLhandleARB;
+ #endif

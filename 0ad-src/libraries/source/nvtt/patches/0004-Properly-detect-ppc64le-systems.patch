@@ -1,0 +1,17 @@
+--- a/src/cmake/DetermineProcessor.cmake
++++ a/src/cmake/DetermineProcessor.cmake
+@@ -15,6 +15,14 @@
+ 			SET(NV_SYSTEM_PROCESSOR "powerpc")
+ 		ENDIF(NV_SYSTEM_PROCESSOR STREQUAL "Power Macintosh")
+ 
++		IF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64le")
++			SET(NV_SYSTEM_PROCESSOR "ppc64")
++		ENDIF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64le")
++
++		IF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64el")
++			SET(NV_SYSTEM_PROCESSOR "ppc64")
++		ENDIF(NV_SYSTEM_PROCESSOR STREQUAL "ppc64el")
++
+ 		# processor may have double quote in the name, and that needs to be removed
+ 		STRING(REGEX REPLACE "\"" "" NV_SYSTEM_PROCESSOR "${NV_SYSTEM_PROCESSOR}")
+ 		STRING(REGEX REPLACE "/" "_" NV_SYSTEM_PROCESSOR "${NV_SYSTEM_PROCESSOR}")

@@ -1,0 +1,15 @@
+{
+    "extends": "recommended-jenkinsfile",
+    "rules": {
+        "formatting.LineLength": {
+            "length": 300,
+            "severity": "info"
+        },
+        "size.NestedBlockDepth": {
+            "maxNestedBlockDepth": 15
+        },
+        "formatting.DuplicateNumberLiteral": "off",
+        "formatting.DuplicateMapLiteral": "off",
+        "formatting.DuplicateStringLiteral": "off"
+    }
+}

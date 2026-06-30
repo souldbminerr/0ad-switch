@@ -1,0 +1,214 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "precompiled.h"
+
+#include "JSInterface_Game.h"
+
+#include "graphics/HeightMipmap.h"
+#include "graphics/Terrain.h"
+#include "lib/config2.h"
+#include "lib/debug.h"
+#include "lib/file/vfs/vfs.h"
+#include "lib/os_path.h"
+#include "lib/path.h"
+#include "network/NetClient.h"
+#include "network/NetServer.h"
+#include "ps/CLogger.h"
+#include "ps/Filesystem.h"
+#include "ps/Game.h"
+#include "ps/GameSetup/GameSetup.h"
+#include "ps/Replay.h"
+#include "ps/World.h"
+#include "scriptinterface/FunctionWrapper.h"
+#include "scriptinterface/ScriptRequest.h"
+#include "scriptinterface/StructuredClone.h"
+#include "simulation2/Simulation2.h"
+#include "simulation2/system/TurnManager.h"
+#include "soundmanager/ISoundManager.h"
+
+#include <js/RootingAPI.h>
+#include <js/TypeDecls.h>
+#include <js/Value.h>
+#include <stdexcept>
+#include <string>
+
+class ScriptInterface;
+
+namespace JSI_Game
+{
+void StartGame(const ScriptInterface& guiInterface, JS::HandleValue attribs, int playerID, bool storeReplay)
+{
+	ENSURE(!g_NetServer);
+	ENSURE(!g_NetClient);
+	ENSURE(!g_Game);
+
+	g_Game = new CGame(storeReplay);
+
+	// Convert from GUI script context to sim script context/
+	CSimulation2* sim = g_Game->GetSimulation2();
+	ScriptRequest rqSim(sim->GetScriptInterface());
+
+	JS::RootedValue gameAttribs(rqSim.cx, Script::CloneValueFromOtherCompartment(sim->GetScriptInterface(), guiInterface, attribs));
+
+	g_Game->SetPlayerID(playerID);
+	g_Game->StartGame(&gameAttribs, "");
+}
+
+void Script_EndGame()
+{
+	EndGame();
+}
+
+int GetPlayerID()
+{
+	if (!g_Game)
+		return -1;
+
+	return g_Game->GetPlayerID();
+}
+
+void SetPlayerID(int id)
+{
+	if (!g_Game)
+		return;
+
+	int currentID = g_Game->GetPlayerID();
+	if (currentID == id)
+		return;
+
+	if (g_Game->CheatsEnabled() || g_Game->IsVisualReplay())
+		g_Game->SetPlayerID(id);
+	else
+		throw std::logic_error{"Changing player ID with cheats disabled is prohibited"};
+}
+
+void SetViewedPlayer(int id)
+{
+	if (!g_Game || g_Game->GetViewedPlayerID() == id)
+		return;
+
+	int playerID = g_Game->GetPlayerID();
+	// Forbid active players to reveal the map by changing perspective, unless cheats are allowed.
+	if (playerID == -1 || g_Game->CheatsEnabled() || g_Game->PlayerFinished(playerID) || g_Game->IsVisualReplay())
+		g_Game->SetViewedPlayerID(id);
+	else
+		throw std::logic_error{"Changing the perspective with cheats disabled is prohibited"};
+}
+
+float GetSimRate()
+{
+	return g_Game->GetSimRate();
+}
+
+void SetSimRate(float rate)
+{
+	g_Game->SetSimRate(rate);
+}
+
+int GetPendingTurns()
+{
+	if (!g_Game || !g_Game->GetTurnManager())
+		return 0;
+
+	return g_Game->GetTurnManager()->GetPendingTurns();
+}
+
+bool IsPaused()
+{
+	if (!g_Game)
+		throw std::logic_error{"Game is not started"};
+
+	return g_Game->m_Paused;
+}
+
+void SetPaused(bool pause, bool sendMessage)
+{
+	if (!g_Game)
+		throw std::logic_error{"Game is not started"};
+
+	g_Game->m_Paused = pause;
+
+#if CONFIG2_AUDIO
+	if (g_SoundManager)
+	{
+		g_SoundManager->PauseAmbient(pause);
+		g_SoundManager->PauseAction(pause);
+	}
+#endif
+
+	if (g_NetClient && sendMessage)
+		g_NetClient->SendPausedMessage(pause);
+}
+
+bool IsVisualReplay()
+{
+	if (!g_Game)
+		return false;
+
+	return g_Game->IsVisualReplay();
+}
+
+std::wstring GetCurrentReplayDirectory()
+{
+	if (!g_Game)
+		return std::wstring();
+
+	if (g_Game->IsVisualReplay())
+		return g_Game->GetReplayPath().Parent().Filename().string();
+
+	return g_Game->GetReplayLogger().GetDirectory().Filename().string();
+}
+
+void EnableTimeWarpRecording(unsigned int numTurns)
+{
+	g_Game->GetTurnManager()->EnableTimeWarpRecording(numTurns);
+}
+
+void RewindTimeWarp()
+{
+	g_Game->GetTurnManager()->RewindTimeWarp();
+}
+
+void DumpTerrainMipmap()
+{
+	VfsPath filename(L"screenshots/terrainmipmap.png");
+	g_Game->GetWorld()->GetTerrain().GetHeightMipmap().DumpToDisk(filename);
+	OsPath realPath;
+	g_VFS->GetRealPath(filename, realPath);
+	LOGMESSAGERENDER("Terrain mipmap written to '%s'", realPath.string8());
+}
+
+void RegisterScriptFunctions(const ScriptRequest& rq)
+{
+	ScriptFunction::Register<&StartGame>(rq, "StartGame");
+	ScriptFunction::Register<&Script_EndGame>(rq, "EndGame");
+	ScriptFunction::Register<&GetPlayerID>(rq, "GetPlayerID");
+	ScriptFunction::Register<&SetPlayerID>(rq, "SetPlayerID");
+	ScriptFunction::Register<&SetViewedPlayer>(rq, "SetViewedPlayer");
+	ScriptFunction::Register<&GetSimRate>(rq, "GetSimRate");
+	ScriptFunction::Register<&SetSimRate>(rq, "SetSimRate");
+	ScriptFunction::Register<&GetPendingTurns>(rq, "GetPendingTurns");
+	ScriptFunction::Register<&IsPaused>(rq, "IsPaused");
+	ScriptFunction::Register<&SetPaused>(rq, "SetPaused");
+	ScriptFunction::Register<&IsVisualReplay>(rq, "IsVisualReplay");
+	ScriptFunction::Register<&GetCurrentReplayDirectory>(rq, "GetCurrentReplayDirectory");
+	ScriptFunction::Register<&EnableTimeWarpRecording>(rq, "EnableTimeWarpRecording");
+	ScriptFunction::Register<&RewindTimeWarp>(rq, "RewindTimeWarp");
+	ScriptFunction::Register<&DumpTerrainMipmap>(rq, "DumpTerrainMipmap");
+}
+}

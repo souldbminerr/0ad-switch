@@ -1,0 +1,83 @@
+This directory holds libraries that are used by the game.
+Libraries are downloaded by running the correct script for your platform.
+
+build-macos-libs.sh downloads and builds required libraries on macOS.
+
+build-source-libs.sh downloads and builds a checkout of source libraries
+    that we bundle, when the game requires a specific library version
+    that may not be available in package managers.
+
+get-windows-libs.bat downloads a checkout of headers and precompiled
+    libraries that we bundle for Windows builds.
+
+  build-macos-libs.sh
+    MIT
+
+  macos-patches
+    see license of applicable library
+
+  source/cxxtest-4.4
+    LGPL v3 - see COPYING
+
+  source/fcollada
+    MIT (see src/FCollada/Copyright.txt)
+
+  source/nvtt
+    MIT - see src/NVIDIA_Texture_Tools_LICENSE.txt
+
+  source/glad
+    Apache-2.0 / (WTFPL OR CC0-1.0) 
+
+  source/spidermonkey
+    MPL / GPL / LGPL
+
+  source/valgrind
+    BSD
+
+  win32/boost
+    Boost Software License
+
+  win32/enet
+    MIT
+
+  win32/fmt
+    MIT
+
+  win32/gloox
+    GPL v3
+
+  win32/iconv
+    LGPL v2.0 (or later)
+
+  win32/icu
+    MIT-X11 - see license.html
+
+  win32/libcurl
+    MIT
+
+  win32/libpng
+    libpng license
+
+  win32/libsodium
+    ISC license
+
+  win32/libxml2
+    MIT
+
+  win32/miniupnpc
+    BSD
+
+  win32/openal
+    LGPL v2.0 (or later)
+
+  win32/opengl
+    MIT
+
+  win32/sdl2
+    zlib license
+
+  win32/vorbis
+    BSD
+
+  win32/zlib
+    zlib license

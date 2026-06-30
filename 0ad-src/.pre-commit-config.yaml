@@ -1,0 +1,95 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args:
+          - --maxkb=1024
+          - --enforce-all
+        exclude: (^binaries/data/mods/public/maps/.*\.xml$)
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-xml
+        exclude: |
+          (?x)(
+            ^binaries/data/mods/_test.xero/a/b/test1.xml|
+            ^binaries/data/mods/_test.xero/test1.xml|
+            ^binaries/data/mods/_test.sim/simulation/templates.illformed.xml|
+            ^binaries/data/mods/public/maps/.*\.xml
+          )
+      - id: trailing-whitespace
+        exclude: |
+          (?x)(
+            ^libraries/|
+            ^source/third_party/glad/src|
+            ^source/tools/replayprofile/jquery|
+            ^source/tools/templatesanalyzer/tablefilter|
+            \.dae|
+            \.patch$
+          )
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
+    hooks:
+      - id: ruff-check
+        args:
+          - --output-format=full
+        exclude: ^source/tools/webservices/
+      - id: ruff-format
+        args:
+          - --diff
+        exclude: ^source/tools/webservices/
+  - repo: local
+    hooks:
+      - id: non-breaking-space-in-0ad
+        name: check for non-breaking space in "0 A.D."
+        description: |
+          Verify a non-breaking spaces is used in the project name ("0 A.D").
+        entry: '0(?!(\xc2\xa0|\\xa0)A\.D\.)\s?(?<!\\xa0)(A|a)\.(D|d)\.?'
+        language: pygrep
+        types: [text]
+        files: ^binaries/
+        exclude: (^binaries/data/mods/(mod|public)/art/.*\.xml|\.dae$)
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.12.0-2
+    hooks:
+      - id: shfmt
+        args:
+          - --diff
+        stages: [pre-commit]
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint
+        language_version: 22.14.0
+        exclude: |
+          (?x)(
+            ^.gitea/ISSUE_TEMPLATE/|
+            ^source/third_party/
+          )
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args:
+          - --strict
+  - repo: https://github.com/eslint/eslint
+    rev: v9.33.0
+    hooks:
+      - id: eslint
+        language_version: 22.14.0
+        additional_dependencies:
+          - eslint-plugin-brace-rules@0.1.6
+          - "@stylistic/eslint-plugin@4.4.0"
+        args:
+          - --max-warnings=0
+          - --no-warn-ignored

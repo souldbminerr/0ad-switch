@@ -1,0 +1,51 @@
+diff --git a/build/moz.configure/pkg.configure b/build/moz.configure/pkg.configure
+--- a/build/moz.configure/pkg.configure
++++ b/build/moz.configure/pkg.configure
+@@ -12,7 +12,7 @@ def pkg_config(prefixes):
+ 
+ @depends(compile_environment, target)
+ def use_pkg_config(compile_environment, target):
+-    return compile_environment and target.os not in ("WINNT", "OSX", "Android")
++    return compile_environment and target.os not in ("WINNT", "Android")
+ 
+ 
+ pkg_config = check_prog(
+diff --git a/build/moz.configure/toolchain.configure b/build/moz.configure/toolchain.configure
+--- a/build/moz.configure/toolchain.configure
++++ b/build/moz.configure/toolchain.configure
+@@ -100,7 +100,7 @@ with only_when(host_is_osx | target_is_osx):
+     )
+ 
+     def mac_sdk_min_version():
+-        return "14.4"
++        return "13.3"
+ 
+     @depends(
+         "--with-macos-sdk",
+@@ -1875,7 +1875,7 @@ def select_linker_tmpl(host_or_target):
+             die("Unsupported linker " + linker)
+ 
+         # Check the kind of linker
+-        version_check = ["-Wl,--version"]
++        version_check = ["-Wl,-ld_classic,--version"]
+         cmd_base = c_compiler.wrapper + [c_compiler.compiler] + c_compiler.flags
+ 
+         def try_linker(linker):
+@@ -1906,7 +1906,16 @@ def select_linker_tmpl(host_or_target):
+                 kind = "ld64"
+ 
+             elif retcode != 0:
+-                return None
++                # macOS 15 fallback: try `-Wl,-v` if --version failed
++                if target.kernel == "Darwin":
++                    fallback_cmd = cmd_base + linker_flag + ["-Wl,-v"]
++                    retcode2, stdout2, stderr2 = get_cmd_output(*fallback_cmd, env=env)
++                    if retcode2 == 0 and "@(#)PROGRAM:ld" in stderr2:
++                        kind = "ld64"
++                    else:
++                        return None
++                else:
++                    return None
+ 
+             elif "mold" in stdout:
+                 kind = "mold"

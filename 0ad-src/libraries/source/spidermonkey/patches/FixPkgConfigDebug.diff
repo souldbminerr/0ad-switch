@@ -1,0 +1,26 @@
+--- a/js/moz.configure
++++ b/js/moz.configure
+@@ -16,6 +16,15 @@ def js_standalone(build_project):
+ set_define("JS_DEBUG", True, when=moz_debug)
+ 
+ 
++@depends(moz_debug)
++def js_debug_defines(moz_debug):
++    if moz_debug:
++        return "-DDEBUG"
++    return ""
++
++set_config("JS_DEBUG_DEFINES", js_debug_defines)
++
++
+ # Branding
+ # ==============================================================
+ option(
+--- a/js/src/build/js.pc.in
++++ b/js/src/build/js.pc.in
+@@ -11,4 +11,4 @@ Libs: -L${libdir} -l@JS_LIBRARY_NAME@
+ # Use -isystem for includes rather than -I, to mark them as "system headers"
+ # that don't generate warning diagnostics. For justification, see
+ # https://bugzilla.mozilla.org/show_bug.cgi?id=1539036
+-Cflags: -isystem ${includedir}/@JS_LIBRARY_NAME@
++Cflags: -isystem ${includedir}/@JS_LIBRARY_NAME@ @JS_DEBUG_DEFINES@

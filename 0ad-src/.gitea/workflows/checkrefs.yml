@@ -1,0 +1,76 @@
+---
+name: checkrefs
+on:
+  - push
+  - pull_request
+env:
+  BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.after }}
+
+jobs:
+  lfscheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the base branch
+        run: git fetch origin ${{ env.BASE_SHA }}
+
+      - name: Check that LFS files are correctly stored as pointers
+        run: git-lfs fsck --pointers ${{ env.BASE_SHA }}..${{ env.HEAD_SHA }}
+
+  checkrefs:
+    runs-on: ubuntu-latest
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add remote fork origin for LFS
+        run: |
+          PR_REPO="${{ gitea.event.pull_request.head.repo.full_name || gitea.repository }}"
+          git remote add ${{ gitea.actor }} https://gitea.wildfiregames.com/${PR_REPO}.git
+      - name: Workaround for authentication problem with LFS
+        # https://gitea.com/gitea/act_runner/issues/164
+        run: |
+          git config --local \
+          http.${{ gitea.server_url }}/${{ gitea.repository }}.git/info/lfs/objects/.extraheader ''
+
+          PR_REPO="${{ gitea.event.pull_request.head.repo.full_name || gitea.repository }}"
+          EXTRAHEADER="$(git config --get --local http.${{ gitea.server_url }}/.extraheader)"
+          git config --local \
+            http.${{ gitea.server_url }}/${PR_REPO}.git/info/lfs/objects/batch.extraheader \
+            '${EXTRAHEADER}'
+          git config --local \
+            http.${{ gitea.server_url }}/${PR_REPO}.git/info/lfs/objects/.extraheader ''
+      - name: Download necessary LFS assets
+        shell: sh {0}
+        run: |
+          git lfs pull -I binaries/data/mods/public/art/meshes,binaries/data/mods/public/maps
+          ORIGIN_LFS_PULL_RESULT=$?
+          git lfs pull ${{ gitea.actor }} \
+            -I binaries/data/mods/public/art/meshes,binaries/data/mods/public/maps
+          FORK_LFS_PULL_RESULT=$?
+
+          PR_REPO="${{ gitea.event.pull_request.head.repo.full_name || gitea.repository }}"
+          if [ "$ORIGIN_LFS_PULL_RESULT" = "0" ]; then
+            echo "SUCCESS: Found all LFS assets in the LFS storage of ${{ gitea.repository }}."
+          elif [ "$FORK_LFS_PULL_RESULT" = "0" ]; then
+            echo "SUCCESS: Found all LFS assets in the LFS storage of ${PR_REPO}."
+          else
+            echo "ERROR: Couldn't find all LFS assets in either of the LFS storages."
+            false;
+          fi
+      - name: Install lxml
+        run: pip3 install lxml
+      - name: Install collada
+        run: pip3 install "pycollada>=0.9"
+      - name: Check for missing references
+        run: |
+          ./source/tools/entity/checkrefs.py \
+            --check-map-xml \
+            --validate-templates \
+            --validate-actors \
+            --validate-meshes

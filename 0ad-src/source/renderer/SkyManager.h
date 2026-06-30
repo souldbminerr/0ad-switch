@@ -1,0 +1,117 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Sky settings and texture management
+ */
+
+#ifndef INCLUDED_SKYMANAGER
+#define INCLUDED_SKYMANAGER
+
+#include "graphics/Texture.h"
+#include "ps/CStr.h"
+#include "renderer/VertexArray.h"
+
+#include <vector>
+
+namespace Renderer::Backend { class IDeviceCommandContext; }
+namespace Renderer::Backend { class ITexture; }
+namespace Renderer::Backend { class IVertexInputLayout; }
+
+/**
+ * Class SkyManager: Maintain sky settings and textures, and render the sky.
+ */
+class SkyManager
+{
+public:
+	SkyManager();
+
+	/**
+	 * Render the sky.
+	 */
+	void RenderSky(
+		Renderer::Backend::IDeviceCommandContext* deviceCommandContext);
+
+	/**
+	 * Return the currently selected sky set name.
+	 */
+	inline const CStrW& GetSkySet() const
+	{
+		return m_SkySet;
+	}
+
+	Renderer::Backend::ITexture* GetSkyCube();
+
+	/**
+	 * Set the sky set name.
+	 */
+	void SetSkySet(const CStrW& name);
+
+	/**
+	 * Return a sorted list of available sky sets, in a form suitable
+	 * for passing to SetSkySet.
+	 */
+	std::vector<CStrW> GetSkySets() const;
+
+	bool IsSkyVisible() const
+	{
+		return m_SkyVisible;
+	}
+
+	void SetSkyVisible(bool value)
+	{
+		m_SkyVisible = value;
+	}
+
+	/**
+	 * Load all sky textures from files and upload to GPU.
+	 */
+	void LoadAndUploadSkyTexturesIfNeeded(
+		Renderer::Backend::IDeviceCommandContext* deviceCommandContext);
+
+private:
+	void CreateSkyCube();
+
+	bool m_SkyVisible = true;
+
+	/// Name of current skyset (a directory within art/textures/skies)
+	CStrW m_SkySet;
+
+	// Indices into m_SkyTexture
+	enum
+	{
+		FRONT,
+		BACK,
+		RIGHT,
+		LEFT,
+		TOP,
+		NUMBER_OF_TEXTURES
+	};
+
+	// Sky textures
+	CTexturePtr m_SkyTexture[NUMBER_OF_TEXTURES];
+	CTexturePtr m_SkyTextureCube;
+
+	VertexArray m_VertexArray;
+	VertexArray::Attribute m_AttributePosition;
+	VertexArray::Attribute m_AttributeUV;
+
+	Renderer::Backend::IVertexInputLayout* m_VertexInputLayout = nullptr;
+};
+
+
+#endif // INCLUDED_SKYMANAGER

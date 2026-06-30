@@ -1,0 +1,37 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.Dockerfile]
+indent_size = 4
+indent_style = space
+
+[*.{js,mjs}]
+indent_style = tab
+
+[*.py]
+indent_size = 4
+indent_style = space
+
+[*.sh]
+indent_style = tab
+function_next_line = true
+simplify = true
+switch_case_indent = true
+
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2
+
+[build/premake/premake5/**]
+ignore = true
+
+[*.Jenkinsfile]
+indent_size = 4
+# Jenkins recommends using spaces for indentation. See:
+# https://wiki.jenkins.io/display/JENKINS/Code+Style+Guidelines
+# Additionally, our linter npm-groovy-lint does not support tabs.
+indent_style = space

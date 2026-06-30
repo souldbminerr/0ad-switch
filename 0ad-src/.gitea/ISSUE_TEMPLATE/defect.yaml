@@ -1,0 +1,41 @@
+---
+name: Defect
+about: >
+  Report an issue with the game. Errors, crashes, unexpected behaviour should be reported this way.
+labels:
+  - "Type/Defect"
+  - "Priority/3: Should Have"
+body:
+  - type: markdown
+    attributes:
+      value: >
+        **Please select a Theme label that corresponds best to your issue. You can also adjust the
+        Priority label.**
+
+  - type: checkboxes
+    attributes:
+      label: Reporting Errors
+      description: >
+        For crashes and errors, you must read the [ReportingErrors](0ad/0ad/wiki/ReportingErrors)
+        page. In particular, if you are reporting a crash, you must upload crashlog files in the
+        Description field below.
+      options:
+        - label: I have read the ReportingErrors wiki page.
+          required: true
+          visible: [form]
+    visible: [form]
+
+  - type: textarea
+    attributes:
+      label: Description
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Version
+      description: >
+        Type the version of the game you are running (displayed at the bottom of the main menu, or
+        the Alpha version, or "nightly-build").
+    validations:
+      required: true

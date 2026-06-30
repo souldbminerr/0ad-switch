@@ -1,0 +1,55 @@
+From a41fa4e94b479edfbab5312f68277f2573893510 Mon Sep 17 00:00:00 2001
+From: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+Date: Mon, 25 Nov 2024 15:57:10 +0100
+Subject: [PATCH] Make clang default toolset for *BSD
+
+https://github.com/premake/premake-core/issues/2338
+
+Signed-off-by: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+---
+ modules/gmake/_preload.lua | 2 +-
+ src/_premake_init.lua      | 2 +-
+ src/base/_foundation.lua   | 1 +
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/modules/gmake/_preload.lua b/modules/gmake/_preload.lua
+index 1ff42b77..e3e9a109 100644
+--- a/modules/gmake/_preload.lua
++++ b/modules/gmake/_preload.lua
+@@ -13,7 +13,7 @@
+ 
+ 	local function defaultToolset()
+ 		local target = os.target()
+-		if target == p.MACOSX then
++		if target == p.MACOSX or target == p.BSD then
+ 			return "clang"
+ 		elseif target == p.EMSCRIPTEN then
+ 			return "emcc"
+diff --git a/src/_premake_init.lua b/src/_premake_init.lua
+index 4a6f080e..672252e5 100644
+--- a/src/_premake_init.lua
++++ b/src/_premake_init.lua
+@@ -1439,7 +1439,7 @@
+ 	filter { "kind:SharedLib", "system:not Windows" }
+ 		pic "On"
+ 
+-	filter { "system:darwin" }
++	filter { "system:darwin or bsd" }
+ 		toolset "clang"
+ 
+ 	filter { "system:emscripten" }
+diff --git a/src/base/_foundation.lua b/src/base/_foundation.lua
+index 9a09753e..0f7b7f9a 100644
+--- a/src/base/_foundation.lua
++++ b/src/base/_foundation.lua
+@@ -26,6 +26,7 @@
+ -- Define some commonly used symbols, for future-proofing.
+ --
+ 
++	premake.BSD         = "bsd"
+ 	premake.C           = "C"
+ 	premake.CLANG       = "clang"
+ 	premake.CONSOLEAPP  = "ConsoleApp"
+-- 
+2.49.0
+

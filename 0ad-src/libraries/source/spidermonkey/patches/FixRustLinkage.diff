@@ -1,0 +1,16 @@
+--- a/js/src/moz.build
++++ b/js/src/moz.build
+@@ -47,9 +47,12 @@
+ with Files("builtin/intl/*"):
+     BUG_COMPONENT = component_intl
+ 
++DIRS += [
++    "rust"
++]
++
+ if not CONFIG["JS_DISABLE_SHELL"]:
+     DIRS += [
+-        "rust",
+         "shell",
+     ]
+ 

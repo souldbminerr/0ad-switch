@@ -1,0 +1,46 @@
+## == Project configuration
+## Gitea configuration
+\\.gitea/.* @Stan @Itms
+## Linting
+\\.pre-commit-config\\.yaml @Dunedan
+ruff\\.toml @Dunedan
+
+## == Build & Libraries
+(build|libraries)/.* @Itms @Stan @sera
+
+## == Engine
+source/(lib|maths|ps)/.* @vladislavbelov @sera
+## GUI
+source/gui/.* @vladislavbelov @trompetin17
+## Rendering
+source/(collada|graphics|renderer)/.* @vladislavbelov
+## Multiplayer
+source/(lobby|network)/.* @Phosit
+## Simulation
+source/simulation2/.* @wraitii @Itms @Phosit @sera
+
+## == Tools
+source/tools/.*\\.py @Dunedan
+## Atlas
+source/tools/atlas/.* @vladislavbelov @trompetin17
+## SPIR-V
+source/tools/spirv/.* @vladislavbelov
+
+## == Scripts
+## GUI
+binaries/data/mods/public/gui/.* @Phosit @wraitii
+## AI
+#binaries/data/mods/public/simulation/ai/.*
+## Balancing
+binaries/data/mods/public/simulation/(data|templates)/.* @real_tabasco_sauce
+
+## == Assets
+## Art
+binaries/data/mods/public/art/.* @wowgetoffyourcellphone @Stan
+binaries/data/mods/(mod|public)/art/materials/.* @vladislavbelov
+## Sound
+binaries/data/mods/public/audio/.* @Samulis @Stan
+## Maps
+binaries/data/mods/public/maps/.* @Phosit @real_tabasco_sauce
+## Shaders
+binaries/data/mods/(mod|public)/shaders/.* @vladislavbelov

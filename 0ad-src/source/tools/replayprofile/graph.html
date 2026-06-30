@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>0 A.D. Simulation Profiling</title>
+		<!-- include js -->
+		<!-- include graph js -->
+	</head>
+	<body onload="showReplayData();">
+		<div>
+			<label>Graph:
+				<select id="replayGraphSelection" size="1" onChange="showReplayData()">
+					<option value="time" selected="selected">Performance</option>
+					<option value="bytes">Memory</option>
+					<option value="garbageCollection">Garbage Collections</option>
+				</select>
+			</label>
+		</div>
+		<div id="replayGraphContainer">
+			<div id="replayGraphLegend" style="width:300px;float:left"></div>
+			<div>
+				<div id="replayGraph" style="width:1100px; height:600px; float:left"></div>
+				<div id="replayGraphDescription" style="float:top"></div>
+			</div>
+		</div>
+	</body>
+</html>

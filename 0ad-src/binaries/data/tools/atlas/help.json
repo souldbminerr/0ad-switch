@@ -1,0 +1,13 @@
+{
+    "Manual": {
+        "title": "&Atlas Manual",
+        "tooltip": "Click to visit the 0 A.D. Atlas Wiki.",
+        "url": "https://gitea.wildfiregames.com/0ad/0ad/wiki/Atlas_Manual"
+    },
+    "ReportBug": {
+        "title": "Report a &Bug",
+        "tooltip": "Click to visit our bug tracker to report a crash or other error.",
+        "url": "https://gitea.wildfiregames.com/0ad/0ad/issues?labels=22"
+    }
+}
+

@@ -1,0 +1,399 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef INCLUDED_ICMPRANGEMANAGER
+#define INCLUDED_ICMPRANGEMANAGER
+
+#include "lib/types.h"
+#include "maths/FixedVector2D.h"
+#include "maths/FixedVector3D.h"
+#include "simulation2/helpers/Player.h"
+#include "simulation2/helpers/Position.h"
+#include "simulation2/system/Component.h"
+#include "simulation2/system/Entity.h"
+#include "simulation2/system/Interface.h"
+
+#include <cstddef>
+#include <js/Value.h>
+#include <string>
+#include <vector>
+
+class FastSpatialSubdivision;
+
+/**
+ * Value assigned to a range we will always be in (caused by out of world or "too high" in parabolic ranges).
+ * TODO Add this for minRanges too.
+ */
+const entity_pos_t ALWAYS_IN_RANGE = entity_pos_t::FromInt(-1);
+
+/**
+ * Value assigned to a range we will never be in (caused by out of world or "too high" in parabolic ranges).
+ * TODO Add this to range queries too.
+ */
+const entity_pos_t NEVER_IN_RANGE = entity_pos_t::FromInt(-2);
+
+/**
+ * Since GetVisibility queries are run by the range manager
+ * other code using these must include ICmpRangeManager.h anyways,
+ * so define this enum here (Ideally, it'd be in its own header file,
+ * but adding header file does incur its own compilation time increase).
+ */
+enum class LosVisibility : u8
+{
+	HIDDEN = 0,
+	FOGGED = 1,
+	VISIBLE = 2
+};
+
+/**
+ * The same principle applies to CLosQuerier, but to avoid recompiling TUs (a fortiori headers)
+ * dependent on RangeManager but not CLosQuerier when CLosQuerier changes,
+ * we define it in another file. Code using LOS will then explicitly include the LOS header
+ * which makes sense anyways.
+ */
+class CLosQuerier;
+
+/**
+ * Provides efficient range-based queries of the game world,
+ * and also LOS-based effects (fog of war).
+ *
+ * (These are somewhat distinct concepts but they share a lot of the implementation,
+ * so for efficiency they're combined into this class.)
+ *
+ * Possible use cases:
+ * - combat units need to detect targetable enemies entering LOS, so they can choose
+ *   to auto-attack.
+ * - auras let a unit have some effect on all units (or those of the same player, or of enemies)
+ *   within a certain range.
+ * - capturable animals need to detect when a player-owned unit is nearby and no units of other
+ *   players are in range.
+ * - scenario triggers may want to detect when units enter a given area.
+ * - units gathering from a resource that is exhausted need to find a new resource of the
+ *   same type, near the old one and reachable.
+ * - projectile weapons with splash damage need to find all units within some distance
+ *   of the target point.
+ * - ...
+ *
+ * In most cases the users are event-based and want notifications when something
+ * has entered or left the range, and the query can be set up once and rarely changed.
+ * These queries have to be fast. Entities are approximated as points or circles
+ * (queries can be set up to ignore sizes because LOS currently ignores it, and mismatches are problematic).
+ *
+ * Current design:
+ *
+ * This class handles just the most common parts of range queries:
+ * distance, target interface, and player ownership.
+ * The caller can then apply any more complex filtering that it needs.
+ *
+ * There are two types of query:
+ * Passive queries are performed by ExecuteQuery and immediately return the matching entities.
+ * Active queries are set up by CreateActiveQuery, and then a CMessageRangeUpdate message will be
+ * sent to the entity once per turn if anybody has entered or left the range since the last RangeUpdate.
+ * Queries can be disabled, in which case no message will be sent.
+ */
+class ICmpRangeManager : public IComponent
+{
+public:
+	/**
+	 * External identifiers for active queries.
+	 */
+	typedef u32 tag_t;
+
+	/**
+	 * Access the spatial subdivision kept by the range manager.
+	 * @return pointer to spatial subdivision structure.
+	 */
+	virtual FastSpatialSubdivision* GetSubdivision() = 0;
+
+	/**
+	 * Set the bounds of the world.
+	 * Entities should not be outside the bounds (else efficiency will suffer).
+	 * @param x0,z0,x1,z1 Coordinates of the corners of the world
+	 */
+	virtual void SetBounds(entity_pos_t x0, entity_pos_t z0, entity_pos_t x1, entity_pos_t z1) = 0;
+
+	/**
+	 * Execute a passive query.
+	 * @param source the entity around which the range will be computed.
+	 * @param minRange non-negative minimum distance in metres (inclusive).
+	 * @param maxRange non-negative maximum distance in metres (inclusive); or -1.0 to ignore distance.
+	 * @param owners list of player IDs that matching entities may have; -1 matches entities with no owner.
+	 * @param requiredInterface if non-zero, an interface ID that matching entities must implement.
+	 * @param accountForSize if true, compensate for source/target entity sizes.
+	 * @return list of entities matching the query, ordered by increasing distance from the source entity.
+	 */
+	virtual std::vector<entity_id_t> ExecuteQuery(entity_id_t source, entity_pos_t minRange, entity_pos_t maxRange,
+		const std::vector<int>& owners, int requiredInterface, bool accountForSize) = 0;
+
+	/**
+	 * Execute a passive query.
+	 * @param pos the position around which the range will be computed.
+	 * @param minRange non-negative minimum distance in metres (inclusive).
+	 * @param maxRange non-negative maximum distance in metres (inclusive); or -1.0 to ignore distance.
+	 * @param owners list of player IDs that matching entities may have; -1 matches entities with no owner.
+	 * @param requiredInterface if non-zero, an interface ID that matching entities must implement.
+	 * @param accountForSize if true, compensate for source/target entity sizes.
+	 * @return list of entities matching the query, ordered by increasing distance from the source entity.
+	 */
+	virtual std::vector<entity_id_t> ExecuteQueryAroundPos(const CFixedVector2D& pos, entity_pos_t minRange, entity_pos_t maxRange,
+		const std::vector<int>& owners, int requiredInterface, bool accountForSize) = 0;
+
+	/**
+	 * Construct an active query. The query will be disabled by default.
+	 * @param source the entity around which the range will be computed.
+	 * @param minRange non-negative minimum distance in metres (inclusive).
+	 * @param maxRange non-negative maximum distance in metres (inclusive); or -1.0 to ignore distance.
+	 * @param owners list of player IDs that matching entities may have; -1 matches entities with no owner.
+	 * @param requiredInterface if non-zero, an interface ID that matching entities must implement.
+	 * @param flags if a entity in range has one of the flags set it will show up.
+	 * @param accountForSize if true, compensate for source/target entity sizes.
+	 * @return unique non-zero identifier of query.
+	 */
+	virtual tag_t CreateActiveQuery(entity_id_t source, entity_pos_t minRange, entity_pos_t maxRange,
+		const std::vector<int>& owners, int requiredInterface, u8 flags, bool accountForSize) = 0;
+
+    /**
+	 * Construct an active query of a paraboloic form around the unit.
+	 * The query will be disabled by default.
+	 * @param source the entity around which the range will be computed.
+	 * @param minRange non-negative minimum horizontal distance in metres (inclusive). MinRange doesn't do parabolic checks.
+	 * @param maxRange non-negative maximum distance in metres (inclusive) for units on the same elevation;
+	 *      or -1.0 to ignore distance.
+	 *      For units on a different height positions, a physical correct paraboloid with height=maxRange/2 above the unit is used to query them
+	 * @param yOrigin extra bonus so the source can be placed higher and shoot further
+	 * @param owners list of player IDs that matching entities may have; -1 matches entities with no owner.
+	 * @param requiredInterface if non-zero, an interface ID that matching entities must implement.
+	 * @param flags if a entity in range has one of the flags set it will show up.
+	 * NB: this one has no accountForSize parameter (assumed true), because we currently can only have 7 arguments for JS functions.
+	 * @return unique non-zero identifier of query.
+	 */
+	virtual tag_t CreateActiveParabolicQuery(entity_id_t source, entity_pos_t minRange, entity_pos_t maxRange, entity_pos_t yOrigin,
+		const std::vector<int>& owners, int requiredInterface, u8 flags) = 0;
+
+
+	/**
+	 * Get the effective range in a parablic range query.
+	 * @param source The entity id at the origin of the query.
+	 * @param target A target entity id.
+	 * @param range The distance to compare terrain height with.
+	 * @param yOrigin Height the source gains over the target by default.
+	 * @return a fixed number representing the effective range correcting parabolicly for the height difference. Returns -1 when the target is too high compared to the source to be in range.
+	 */
+	virtual entity_pos_t GetEffectiveParabolicRange(entity_id_t source, entity_id_t target, entity_pos_t range, entity_pos_t yOrigin) const = 0;
+
+	/**
+	 * Get the average elevation over 8 points on distance range around the entity
+	 * @param id the entity id to look around
+	 * @param range the distance to compare terrain height with
+	 * @return a fixed number representing the average difference. It's positive when the entity is on average higher than the terrain surrounding it.
+	 */
+	virtual entity_pos_t GetElevationAdaptedRange(const CFixedVector3D& pos, const CFixedVector3D& rot, entity_pos_t range, entity_pos_t yOrigin, entity_pos_t angle) const = 0;
+
+	/**
+	 * Destroy a query and clean up resources. This must be called when an entity no longer needs its
+	 * query (e.g. when the entity is destroyed).
+	 * @param tag identifier of query.
+	 */
+	virtual void DestroyActiveQuery(tag_t tag) = 0;
+
+	/**
+	 * Re-enable the processing of a query.
+	 * @param tag identifier of query.
+	 */
+	virtual void EnableActiveQuery(tag_t tag) = 0;
+
+	/**
+	 * Disable the processing of a query (no RangeUpdate messages will be sent).
+	 * @param tag identifier of query.
+	 */
+	virtual void DisableActiveQuery(tag_t tag) = 0;
+
+	/**
+	 * Check if the processing of a query is enabled.
+	 * @param tag identifier of a query.
+	 */
+	virtual bool IsActiveQueryEnabled(tag_t tag) const = 0;
+
+	/**
+	 * Immediately execute a query, and re-enable it if disabled.
+	 * The next RangeUpdate message will say who has entered/left since this call,
+	 * so you won't miss any notifications.
+	 * @param tag identifier of query.
+	 * @return list of entities matching the query, ordered by increasing distance from the source entity.
+	 */
+	virtual std::vector<entity_id_t> ResetActiveQuery(tag_t tag) = 0;
+
+	/**
+	 * Returns a list of all entities for a specific player.
+	 * (This is on this interface because it shares a lot of the implementation.
+	 * Maybe it should be extended to be more like ExecuteQuery without
+	 * the range parameter.)
+	 */
+	virtual std::vector<entity_id_t> GetEntitiesByPlayer(player_id_t player) const = 0;
+
+	/**
+	 * Returns a list of all entities of all players except gaia.
+	 */
+	virtual std::vector<entity_id_t> GetNonGaiaEntities() const = 0;
+
+	/**
+	 * Returns a list of all entities owned by a player or gaia.
+	 */
+	virtual std::vector<entity_id_t> GetGaiaAndNonGaiaEntities() const = 0;
+
+	/**
+	 * Toggle the rendering of debug info.
+	 */
+	virtual void SetDebugOverlay(bool enabled) = 0;
+
+	/**
+	 * Returns the mask for the specified identifier.
+	 */
+	virtual u8 GetEntityFlagMask(const std::string& identifier) const = 0;
+
+	/**
+	 * Set the flag specified by the identifier to the supplied value for the entity
+	 * @param ent the entity whose flags will be modified.
+	 * @param identifier the flag to be modified.
+	 * @param value to which the flag will be set.
+	 */
+	virtual void SetEntityFlag(entity_id_t ent, const std::string& identifier, bool value) = 0;
+
+
+	//////////////////////////////////////////////////////////////////
+	////              LOS interface below this line               ////
+	//////////////////////////////////////////////////////////////////
+
+	/**
+	 * Returns a CLosQuerier for checking whether vertex positions are visible to the given player
+	 *	(or other players it shares LOS with).
+	 */
+	virtual CLosQuerier GetLosQuerier(player_id_t player) const = 0;
+
+	/**
+	 * Toggle the scripted Visibility component activation for entity ent.
+	 */
+	virtual void ActivateScriptedVisibility(entity_id_t ent, bool status) = 0;
+
+	/**
+	 * Returns the visibility status of the given entity, with respect to the given player.
+	 * Returns LosVisibility::HIDDEN if the entity doesn't exist or is not in the world.
+	 * This respects the GetLosRevealAll flag.
+	 */
+	virtual LosVisibility GetLosVisibility(CEntityHandle ent, player_id_t player) const = 0;
+	virtual LosVisibility GetLosVisibility(entity_id_t ent, player_id_t player) const = 0;
+
+	/**
+	 * Returns the visibility status of the given position, with respect to the given player.
+	 * This respects the GetLosRevealAll flag.
+	 */
+	virtual LosVisibility GetLosVisibilityPosition(entity_pos_t x, entity_pos_t z, player_id_t player) const = 0;
+
+	/**
+	 * Request the update of the visibility cache of ent at next turn.
+	 * Typically used for fogging.
+	 */
+	virtual void RequestVisibilityUpdate(entity_id_t ent) = 0;
+
+
+	/**
+	 * GetLosVisibility wrapped for script calls.
+	 * Returns "hidden", "fogged" or "visible".
+	 */
+	std::string GetLosVisibility_wrapper(entity_id_t ent, player_id_t player) const;
+
+	/**
+	 * GetLosVisibilityPosition wrapped for script calls.
+	 * Returns "hidden", "fogged" or "visible".
+	 */
+	std::string GetLosVisibilityPosition_wrapper(entity_pos_t x, entity_pos_t z, player_id_t player) const;
+
+	/**
+	 * Explore the map (but leave it in the FoW) for player p
+	 */
+	virtual void ExploreMap(player_id_t p) = 0;
+
+	/**
+	 * Explore the tiles inside each player's territory.
+	 * This is done only at the beginning of the game.
+	 */
+	virtual void ExploreTerritories() = 0;
+
+	/**
+	 * Reveal the shore for specified player p.
+	 * This works like for entities: if RevealShore is called multiple times with enabled, it
+	 * will be necessary to call it the same number of times with !enabled to make the shore
+	 * fall back into the FoW.
+	 */
+	virtual void RevealShore(player_id_t p, bool enable) = 0;
+
+	/**
+	 * Set whether the whole map should be made visible to the given player.
+	 * If player is -1, the map will be made visible to all players.
+	 */
+	virtual void SetLosRevealAll(player_id_t player, bool enabled) = 0;
+
+	/**
+	 * Returns whether the whole map has been made visible to the given player.
+	 */
+	virtual bool GetLosRevealAll(player_id_t player) const = 0;
+
+	/**
+	 * Set the LOS to be restricted to a circular map.
+	 */
+	virtual void SetLosCircular(bool enabled) = 0;
+
+	/**
+	 * Returns whether the LOS is restricted to a circular map.
+	 */
+	virtual bool GetLosCircular() const = 0;
+
+	/**
+	 * Sets shared LOS data for player to the given list of players.
+	 */
+	virtual void SetSharedLos(player_id_t player, const std::vector<player_id_t>& players) = 0;
+
+	/**
+	 * Returns shared LOS mask for player.
+	 */
+	virtual u32 GetSharedLosMask(player_id_t player) const = 0;
+
+	/**
+	 * Get percent map explored statistics for specified player.
+	 */
+	virtual u8 GetPercentMapExplored(player_id_t player) const = 0;
+
+	/**
+	 * Get percent map explored statistics for specified set of players.
+	 * Note: this function computes statistics from scratch and should not be called too often.
+	 */
+	virtual u8 GetUnionPercentMapExplored(const std::vector<player_id_t>& players) const = 0;
+
+	/**
+	 * @return The number of LOS vertices.
+	 */
+	virtual size_t GetVerticesPerSide() const = 0;
+
+	/**
+	 * Perform some internal consistency checks for testing/debugging.
+	 */
+	virtual void Verify() = 0;
+
+	DECLARE_INTERFACE_TYPE(RangeManager)
+};
+
+#endif // INCLUDED_ICMPRANGEMANAGER

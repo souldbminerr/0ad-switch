@@ -1,0 +1,29 @@
+/*!
+@mainpage
+
+<h1>Pyrogenesis</h1>
+
+<p>The Pyrogenesis Engine is specifically designed for flexibility and ease of modification.</p>
+<p>This document should help all that want to contribute their Work to this Engine.</p>
+
+<h2>Thirdparty</h2>
+- <a href="https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/">Vulkan Memory Allocator</a>
+- <a href="https://github.com/tinygettext/tinygettext">tinygettext</a>
+- <a href="https://github.com/jothepro/doxygen-awesome-css">doxygen-awesome-css</a>
+
+<h2>License</h2>
+
+@link ../../LICENSE.md 0 A.D. Licensing Details
+
+*/
+
+
+/*!
+@page docs Documentation
+
+<h2>Components</h2>
+
+- @subpage writing-components
+- @subpage serialization
+
+*/

@@ -1,0 +1,7 @@
+--- a/js/src/rust/Cargo.toml	2025-07-24 15:26:33.000000000 -0400
++++ b/js/src/rust/Cargo.toml	2026-06-14 18:53:27.233999630 -0400
+@@ -21,4 +21,3 @@
+ jsrust_shared = { path = "./shared" }
+ # Workaround for https://github.com/rust-lang/rust/issues/58393
+ mozglue-static = { path = "../../../mozglue/static/rust" }
+-wast = "205.0.0"

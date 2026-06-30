@@ -1,0 +1,38 @@
+#include "lib/build_version.h"
+
+#include <winver.h>
+
+#ifndef DEBUG
+#define VER_DEBUG                   0
+#else
+#define VER_DEBUG                   VS_FF_DEBUG
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     PS_VERSION_WORD
+PRODUCTVERSION  PS_VERSION_WORD
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       VER_DEBUG
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "Wildfire Games"
+            VALUE "FileDescription", "Pyrogenesis engine"
+            VALUE "FileVersion", PS_VERSION
+            VALUE "InternalName", "pyrogenesis.rc"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Wildfire Games"
+            VALUE "OriginalFilename", "pyrogenesis.rc"
+            VALUE "ProductName", "Pyrogenesis"
+            VALUE "ProductVersion", PS_VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 0x4E4
+    END
+END

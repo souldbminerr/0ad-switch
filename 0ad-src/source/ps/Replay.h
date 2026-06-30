@@ -1,0 +1,124 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef INCLUDED_REPLAY
+#define INCLUDED_REPLAY
+
+#include "lib/code_annotation.h"
+#include "lib/os_path.h"
+#include "lib/types.h"
+
+#include <iosfwd>
+#include <js/RootingAPI.h>
+#include <js/TypeDecls.h>
+#include <js/Value.h>
+#include <string>
+#include <vector>
+
+class CSimulation2;
+class ScriptInterface;
+struct SimulationCommand;
+
+/**
+ * Replay log recorder interface.
+ * Call its methods at appropriate times during the game.
+ */
+class IReplayLogger
+{
+public:
+	IReplayLogger() { }
+	virtual ~IReplayLogger() { }
+
+	/**
+	 * Started the game with the given game attributes.
+	 */
+	virtual void StartGame(JS::MutableHandleValue attribs) = 0;
+
+	/**
+	 * Run the given turn with the given collection of player commands.
+	 */
+	virtual void Turn(u32 n, u32 turnLength, std::vector<SimulationCommand>& commands) = 0;
+
+	/**
+	 * Optional hash of simulation state (for sync checking).
+	 */
+	virtual void Hash(const std::string& hash, bool quick) = 0;
+
+	/**
+	 * Saves metadata.json containing part of the simulation state used for the summary screen.
+	 */
+	virtual void SaveMetadata(const CSimulation2& simulation) = 0;
+
+	/**
+	 * Remember the directory containing the commands.txt file, so that we can save additional files to it.
+	 */
+	virtual OsPath GetDirectory() const = 0;
+};
+
+/**
+ * Implementation of IReplayLogger that simply throws away all data.
+ */
+class CDummyReplayLogger : public IReplayLogger
+{
+public:
+	virtual void StartGame(JS::MutableHandleValue /*attribs*/) { }
+	virtual void Turn(u32 /*n*/, u32 /*turnLength*/, std::vector<SimulationCommand>&) { }
+	virtual void Hash(const std::string& /*hash*/, bool /*quick*/) { }
+	virtual void SaveMetadata(const CSimulation2&) { };
+	virtual OsPath GetDirectory() const { return OsPath(); }
+};
+
+/**
+ * Implementation of IReplayLogger that saves data to a file in the logs directory.
+ */
+class CReplayLogger : public IReplayLogger
+{
+	NONCOPYABLE(CReplayLogger);
+public:
+	CReplayLogger(const ScriptInterface& scriptInterface);
+	~CReplayLogger();
+
+	virtual void StartGame(JS::MutableHandleValue attribs);
+	virtual void Turn(u32 n, u32 turnLength, std::vector<SimulationCommand>& commands);
+	virtual void Hash(const std::string& hash, bool quick);
+	virtual void SaveMetadata(const CSimulation2& simulation);
+	virtual OsPath GetDirectory() const;
+
+private:
+	const ScriptInterface& m_ScriptInterface;
+	std::ostream* m_Stream;
+	OsPath m_Directory;
+};
+
+/**
+ * Replay log replayer. Runs the log with no graphics and dumps some info to stdout.
+ */
+class CReplayPlayer
+{
+public:
+	CReplayPlayer();
+	~CReplayPlayer();
+
+	void Load(const OsPath& path);
+	void Replay(const bool serializationtest, const int rejointestturn, const bool ooslog, const bool testHashFull, const bool testHashQuick);
+
+private:
+	std::istream* m_Stream;
+	void TestHash(const std::string& hashType, const std::string& replayHash, const bool testHashFull, const bool testHashQuick);
+};
+
+#endif // INCLUDED_REPLAY

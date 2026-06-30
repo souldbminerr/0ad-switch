@@ -1,0 +1,83 @@
+---
+# yamllint disable rule:line-length
+name: lint
+on:
+  - push
+  - pull_request
+env:
+  BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.after }}
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # cache only works for items in workspace, so configure apt to allow for caching.
+      - name: Setup apt cache locations
+        id: apt-cache-location
+        run: |
+          mkdir -p apt-cache/archives/partial
+          mkdir -p apt-lists/partial
+          mkdir -p apt-lists/auxfiles
+          sudo echo "Dir::Cache \"$(realpath apt-cache)\";" >/etc/apt/apt.conf.d/99cachelocation
+          sudo echo "Dir::State::lists \"$(realpath apt-lists)\";" >>/etc/apt/apt.conf.d/99cachelocation
+
+      - name: Cache apt pkg db and and deb files
+        id: apt-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            apt-cache
+            apt-lists
+          key: ${{ runner.os }}-apt-cache-4
+
+      - name: Update package db
+        if: steps.apt-cache.outputs.cache-hit != 'true'
+        run: sudo apt-get update
+
+      - name: Install cppcheck
+        run: sudo apt-get --assume-yes --no-install-recommends install cppcheck
+
+      - name: Fetch the base branch, so we can use `git diff`
+        run: git fetch origin ${{ env.BASE_SHA }}
+
+      - name: Check for issues
+        run: ./source/tools/lint/cppcheck/cppcheck.sh --diff ${{ env.BASE_SHA }}
+
+  copyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch the base branch, so we can use `git diff`
+        run: git fetch origin ${{ env.BASE_SHA }}
+
+      - name: Check for issues with copyright
+        run: ./source/tools/lint/copyright/copyright.sh --from ${{ env.BASE_SHA }} --to ${{ env.HEAD_SHA }}
+
+  jenkinsfiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch the base branch, so we can use `git diff`
+        run: git fetch origin ${{ env.BASE_SHA }}
+
+      - name: Install npm-groovy-lint
+        run: npm install -g npm-groovy-lint
+
+      - name: Check for issues with jenkins files
+        run: ./source/tools/lint/jenkinsfiles/jenkinsfiles.sh --from ${{ env.BASE_SHA }} --to ${{ env.HEAD_SHA }}

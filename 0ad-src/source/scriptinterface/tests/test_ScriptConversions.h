@@ -1,0 +1,280 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "lib/self_test.h"
+
+#include "lib/file/vfs/vfs.h"
+#include "lib/path.h"
+#include "lib/types.h"
+#include "maths/Fixed.h"
+#include "maths/FixedVector2D.h"
+#include "maths/FixedVector3D.h"
+#include "ps/Filesystem.h"
+#include "scriptinterface/FunctionWrapper.h"
+#include "scriptinterface/ScriptConversions.h"
+#include "scriptinterface/ScriptInterface.h"
+#include "scriptinterface/ScriptRequest.h"
+
+#include <cmath>
+#include <js/RootingAPI.h>
+#include <js/TypeDecls.h>
+#include <js/Value.h>
+#include <limits>
+#include <string>
+
+class TestScriptConversions : public CxxTest::TestSuite
+{
+	template <typename T>
+	void convert_to(const T& value, const std::string& expected)
+	{
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		TS_ASSERT(script.LoadGlobalScripts());
+		ScriptRequest rq(script);
+
+		JS::RootedValue v1(rq.cx);
+		Script::ToJSVal(rq, &v1, value);
+
+		// We want to convert values to strings, but can't just call toSource() on them
+		// since they might not be objects. So just use uneval.
+		std::string source;
+		JS::RootedValue global(rq.cx, rq.globalValue());
+		TS_ASSERT(ScriptFunction::Call(rq, global, "uneval", source, v1));
+
+		TS_ASSERT_STR_EQUALS(source, expected);
+	}
+
+	template <typename T>
+	void roundtrip(const T& value, const char* expected)
+	{
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		TS_ASSERT(script.LoadGlobalScripts());
+		ScriptRequest rq(script);
+
+		JS::RootedValue v1(rq.cx);
+		Script::ToJSVal(rq, &v1, value);
+
+		std::string source;
+		JS::RootedValue global(rq.cx, rq.globalValue());
+		TS_ASSERT(ScriptFunction::Call(rq, global, "uneval", source, v1));
+
+		if (expected)
+			TS_ASSERT_STR_EQUALS(source, expected);
+
+		T v2 = T();
+		TS_ASSERT(Script::FromJSVal(rq, v1, v2));
+		TS_ASSERT_EQUALS(value, v2);
+	}
+
+	template <typename T>
+	void call_prototype_function(const T& u, const T& v, const std::string& func, const std::string& expected)
+	{
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		TS_ASSERT(script.LoadGlobalScripts());
+		ScriptRequest rq(script);
+
+		JS::RootedValue v1(rq.cx);
+		Script::ToJSVal(rq, &v1, v);
+		JS::RootedValue u1(rq.cx);
+		Script::ToJSVal(rq, &u1, u);
+
+		T r;
+		JS::RootedValue r1(rq.cx);
+
+		TS_ASSERT(ScriptFunction::Call(rq, u1, func.c_str(), r, v1));
+		Script::ToJSVal(rq, &r1, r);
+
+		std::string source;
+		JS::RootedValue global(rq.cx, rq.globalValue());
+		TS_ASSERT(ScriptFunction::Call(rq, global, "uneval", source, r1));
+
+		TS_ASSERT_STR_EQUALS(source, expected);
+	}
+
+public:
+	void setUp()
+	{
+		g_VFS = CreateVfs();
+		TS_ASSERT_OK(g_VFS->Mount(L"", DataDir() / "mods" / "_test.sim" / "", VFS_MOUNT_MUST_EXIST));
+	}
+
+	void tearDown()
+	{
+		g_VFS.reset();
+	}
+
+	void test_roundtrip()
+	{
+		roundtrip<bool>(true, "true");
+		roundtrip<bool>(false, "false");
+
+		roundtrip<float>(0, "0");
+		roundtrip<float>(0.5, "0.5");
+		roundtrip<float>(1e9f, "1000000000");
+		roundtrip<float>(1e30f, "1.0000000150474662e+30");
+
+		roundtrip<i32>(0, "0");
+		roundtrip<i32>(123, "123");
+		roundtrip<i32>(-123, "-123");
+		roundtrip<i32>(JSVAL_INT_MAX - 1, "2147483646");
+		roundtrip<i32>(JSVAL_INT_MAX, "2147483647");
+		roundtrip<i32>(JSVAL_INT_MIN + 1, "-2147483647");
+		roundtrip<i32>(JSVAL_INT_MIN, "-2147483648");
+
+		roundtrip<u32>(0, "0");
+		roundtrip<u32>(123, "123");
+		roundtrip<u32>(JSVAL_INT_MAX - 1, "2147483646");
+		roundtrip<u32>(JSVAL_INT_MAX, "2147483647");
+
+		roundtrip<u32>(static_cast<u32>(JSVAL_INT_MAX) + 1, "2147483648");
+
+		std::string s1 = "test";
+		s1[1] = '\0';
+		std::string s2 = "тест";
+		s2[2] = s2[3] = '\0';
+
+		std::wstring w1 = L"test";
+		w1[1] = '\0';
+		std::wstring w2 = L"тест";
+		w2[1] = '\0';
+
+		roundtrip<std::string>("", "\"\"");
+		roundtrip<std::string>("test", "\"test\"");
+		roundtrip<std::string>("тест", "\"\\u0442\\u0435\\u0441\\u0442\"");
+		roundtrip<std::string>(s1, "\"t\\x00st\"");
+		roundtrip<std::string>(s2, "\"\\u0442\\x00\\x00\\u0441\\u0442\"");
+
+		roundtrip<std::wstring>(L"", "\"\"");
+		roundtrip<std::wstring>(L"test", "\"test\"");
+		roundtrip<std::wstring>(L"тест", "\"\\u0442\\u0435\\u0441\\u0442\"");
+		roundtrip<std::wstring>(w1, "\"t\\x00st\"");
+		roundtrip<std::wstring>(w2, "\"\\u0442\\x00\\u0441\\u0442\"");
+
+		convert_to<const char*>("", "\"\"");
+		convert_to<const char*>("test", "\"test\"");
+		convert_to<const char*>(s1.c_str(), "\"t\"");
+		convert_to<const char*>(s2.c_str(), "\"\\xD1\\x82\"");
+
+		roundtrip<fixed>(fixed::FromInt(0), "0");
+		roundtrip<fixed>(fixed::FromInt(123), "123");
+		roundtrip<fixed>(fixed::FromInt(-123), "-123");
+		roundtrip<fixed>(fixed::FromDouble(123.25), "123.25");
+	}
+
+	void test_integers()
+	{
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		ScriptRequest rq(script);
+
+		// using new uninitialized variables each time to be sure the test doesn't succeeed if ToJSVal doesn't touch the value at all.
+		JS::RootedValue val0(rq.cx), val1(rq.cx), val2(rq.cx), val3(rq.cx), val4(rq.cx), val5(rq.cx), val6(rq.cx), val7(rq.cx), val8(rq.cx);
+		Script::ToJSVal<i32>(rq, &val0, 0);
+		Script::ToJSVal<i32>(rq, &val1, JSVAL_INT_MAX - 1);
+		Script::ToJSVal<i32>(rq, &val2, JSVAL_INT_MAX);
+		Script::ToJSVal<i32>(rq, &val3, JSVAL_INT_MIN + 1);
+		Script::ToJSVal<i32>(rq, &val4, -(i64)2147483648u); // JSVAL_INT_MIN
+		TS_ASSERT(val0.isInt32());
+		TS_ASSERT(val1.isInt32());
+		TS_ASSERT(val2.isInt32());
+		TS_ASSERT(val3.isInt32());
+		TS_ASSERT(val4.isInt32());
+
+		Script::ToJSVal<u32>(rq, &val5, 0);
+		Script::ToJSVal<u32>(rq, &val6, 2147483646u); // JSVAL_INT_MAX-1
+		Script::ToJSVal<u32>(rq, &val7, 2147483647u); // JSVAL_INT_MAX
+		Script::ToJSVal<u32>(rq, &val8, 2147483648u); // JSVAL_INT_MAX+1
+		TS_ASSERT(val5.isInt32());
+		TS_ASSERT(val6.isInt32());
+		TS_ASSERT(val7.isInt32());
+		TS_ASSERT(val8.isDouble());
+	}
+
+	void test_nonfinite()
+	{
+		roundtrip<float>(std::numeric_limits<float>::infinity(), "Infinity");
+		roundtrip<float>(-std::numeric_limits<float>::infinity(), "-Infinity");
+		convert_to<float>(std::numeric_limits<float>::quiet_NaN(), "NaN"); // can't use roundtrip since nan != nan
+
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		ScriptRequest rq(script);
+
+		float f = 0;
+		JS::RootedValue testNANVal(rq.cx);
+		Script::ToJSVal(rq, &testNANVal, NAN);
+		TS_ASSERT(Script::FromJSVal(rq, testNANVal, f));
+		TS_ASSERT(std::isnan(f));
+	}
+
+	// NOTE: fixed and vector conversions are defined in simulation2/scripting/EngineScriptConversions.cpp
+
+	void test_fixed()
+	{
+		fixed f;
+
+		f.SetInternalValue(10590283);
+		roundtrip<fixed>(f, "161.5948944091797");
+
+		f.SetInternalValue(-10590283);
+		roundtrip<fixed>(f, "-161.5948944091797");
+
+		f.SetInternalValue(2000000000);
+		roundtrip<fixed>(f, "30517.578125");
+
+		f.SetInternalValue(2000000001);
+		roundtrip<fixed>(f, "30517.57814025879");
+	}
+
+	void test_vector2d()
+	{
+		CFixedVector2D v(fixed::Zero(), fixed::Pi());
+		roundtrip<CFixedVector2D>(v, "({x:0, y:3.1415863037109375})");
+
+		CFixedVector2D u(fixed::FromInt(1), fixed::Zero());
+		call_prototype_function<CFixedVector2D>(u, v, "add", "({x:1, y:3.1415863037109375})");
+	}
+
+	void test_vector3d()
+	{
+		CFixedVector3D v(fixed::Zero(), fixed::Pi(), fixed::FromInt(1));
+		roundtrip<CFixedVector3D>(v, "({x:0, y:3.1415863037109375, z:1})");
+
+		CFixedVector3D u(fixed::Pi(), fixed::Zero(), fixed::FromInt(2));
+		call_prototype_function<CFixedVector3D>(u, v, "add", "({x:3.1415863037109375, y:3.1415863037109375, z:3})");
+	}
+
+	void test_utf8utf16_conversion()
+	{
+		// Fancier conversion: we store UTF8 and get UTF16 and vice-versa
+		ScriptInterface script("Test", "Test", g_ScriptContext);
+		TS_ASSERT(script.LoadGlobalScripts());
+		ScriptRequest rq(script);
+
+		std::string in_utf8("éè!§$-aezi134900°°©©¢¢ÇÇ'{¶«¡Ç'[å»ÛÁØ");
+		std::wstring in_utf16(L"éè!§$-aezi134900°°©©¢¢ÇÇ'{¶«¡Ç'[å»ÛÁØ");
+
+		JS::RootedValue v1(rq.cx);
+		Script::ToJSVal(rq, &v1, in_utf8);
+		std::wstring test_out_utf16;
+		TS_ASSERT(Script::FromJSVal(rq, v1, test_out_utf16));
+		TS_ASSERT_EQUALS(test_out_utf16, in_utf16);
+
+		JS::RootedValue v2(rq.cx);
+		Script::ToJSVal(rq, &v2, in_utf16);
+		std::string test_out_utf8;
+		TS_ASSERT(Script::FromJSVal(rq, v2, test_out_utf8));
+		TS_ASSERT_EQUALS(test_out_utf8, in_utf8);
+	}
+};

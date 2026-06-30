@@ -1,0 +1,41 @@
+From fee966a8d44afc26005df9b539b16a5ee7f99107 Mon Sep 17 00:00:00 2001
+From: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+Date: Sun, 27 Apr 2025 07:53:42 +0200
+Subject: [PATCH] Don't overspecify flags
+
+Cmake picks flags like CFALGS CXXFLAGS and LDFLAGS from environment. The
+use of CMAKE_LINK_FLAGS even triggers a warning.
+
+Fixes: #7538
+Signed-off-by: Ralph Sennhauser <ralph.sennhauser@gmail.com>
+---
+ build.sh | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/build.sh b/build.sh
+index dae3bcf..935c6ff 100755
+--- a/build.sh
++++ b/build.sh
+@@ -29,9 +29,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
+   # but they're not as flexible for cross-compiling
+   # Disable png support (avoids some conflicts with MacPorts)
+   cmake .. \
+-    -DCMAKE_LINK_FLAGS="$LDFLAGS" \
+-    -DCMAKE_C_FLAGS="$CFLAGS" \
+-    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+     -DCMAKE_BUILD_TYPE=Release \
+     $CMAKE_FLAGS \
+     -DBINDIR=bin \
+@@ -40,9 +37,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
+     -G "Unix Makefiles"
+ else
+   cmake .. \
+-    -DCMAKE_LINK_FLAGS="$LDFLAGS" \
+-    -DCMAKE_C_FLAGS="$CFLAGS" \
+-    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+     $CMAKE_FLAGS \
+-- 
+2.49.0
+

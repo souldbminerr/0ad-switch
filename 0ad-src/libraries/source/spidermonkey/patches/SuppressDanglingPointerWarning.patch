@@ -1,0 +1,46 @@
+
+# HG changeset patch
+# User Steve Fink <sfink@mozilla.com>
+# Date 1746227785 0
+# Node ID 5c04f022856284273c3f1a0367a599431798bab3
+# Parent  0a9b2997cbcf9652ce9440ba74cbbb3bf513a937
+Bug 1953622 - Suppress -Wdangling-pointer warning when storing a Rooted address r=spidermonkey-reviewers,jonco
+
+Differential Revision: https://phabricator.services.mozilla.com/D241310
+
+
+diff --git a/js/public/RootingAPI.h b/js/public/RootingAPI.h
+--- a/js/public/RootingAPI.h
++++ b/js/public/RootingAPI.h
+@@ -1140,21 +1140,30 @@ using RootedTraits =
+  * function that requires a handle, e.g. Foo(Root<T>(cx, x)).
+  *
+  * If you want to add additional methods to Rooted for a specific
+  * specialization, define a RootedOperations<T> specialization containing them.
+  */
+ template <typename T>
+ class MOZ_RAII Rooted : public detail::RootedTraits<T>::StackBase,
+                         public js::RootedOperations<T, Rooted<T>> {
++
++  // Intentionally store a pointer into the stack.
++#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 12)
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdangling-pointer"
++#endif
+   inline void registerWithRootLists(RootedListHeads& roots) {
+     this->stack = &roots[JS::MapTypeToRootKind<T>::kind];
+     this->prev = *this->stack;
+     *this->stack = this;
+   }
++#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 12)
++#pragma GCC diagnostic pop
++#endif
+ 
+   inline RootedListHeads& rootLists(RootingContext* cx) {
+     return cx->stackRoots_;
+   }
+   inline RootedListHeads& rootLists(JSContext* cx) {
+     return rootLists(RootingContext::get(cx));
+   }
+ 
+

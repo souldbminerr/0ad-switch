@@ -1,0 +1,52 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+FINDINGS.MD
+/0ad-src/binaries/data/mods
+deps/src/boost_1_83_0.tar.gz
+*.elf
+*.nacp
+*.map
+*.lst
+
+*.dae
+*.dds
+*.hmap
+*.icns
+*.ogg
+*.otf
+*.pmd
+*.pmp
+*.png
+*.psa
+*.ttf

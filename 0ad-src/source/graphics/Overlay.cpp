@@ -1,0 +1,74 @@
+/* Copyright (C) 2025 Wildfire Games.
+ * This file is part of 0 A.D.
+ *
+ * 0 A.D. is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * 0 A.D. is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with 0 A.D.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include "precompiled.h"
+
+#include "Overlay.h"
+
+#include "graphics/TextureManager.h"
+#include "lib/debug.h"
+#include "renderer/Renderer.h"
+#include "renderer/TexturedLineRData.h"
+#include "renderer/backend/Sampler.h"
+
+SOverlayTexturedLine::LineCapType SOverlayTexturedLine::StrToLineCapType(const std::wstring& str)
+{
+	if (str == L"round")
+		return LINECAP_ROUND;
+	else if (str == L"sharp")
+		return LINECAP_SHARP;
+	else if (str == L"square")
+		return LINECAP_SQUARE;
+	else if (str == L"flat")
+		return LINECAP_FLAT;
+	else {
+		debug_warn(L"[Overlay] Unrecognized line cap type identifier");
+		return LINECAP_FLAT;
+	}
+}
+
+void SOverlayTexturedLine::CreateOverlayTexture(const SOverlayDescriptor* overlayDescriptor)
+{
+	CTextureProperties texturePropsBase(overlayDescriptor->m_LineTexture.c_str());
+	texturePropsBase.SetAddressMode(
+		Renderer::Backend::Sampler::AddressMode::CLAMP_TO_BORDER,
+		Renderer::Backend::Sampler::AddressMode::CLAMP_TO_EDGE);
+	texturePropsBase.SetAnisotropicFilter(true);
+
+	CTextureProperties texturePropsMask(overlayDescriptor->m_LineTextureMask.c_str());
+	texturePropsMask.SetAddressMode(
+		Renderer::Backend::Sampler::AddressMode::CLAMP_TO_BORDER,
+		Renderer::Backend::Sampler::AddressMode::CLAMP_TO_EDGE);
+	texturePropsMask.SetAnisotropicFilter(true);
+
+	m_AlwaysVisible = false;
+	m_Closed = true;
+	m_Thickness = overlayDescriptor->m_LineThickness;
+	m_TextureBase = g_Renderer.GetTextureManager().CreateTexture(texturePropsBase);
+	m_TextureMask = g_Renderer.GetTextureManager().CreateTexture(texturePropsMask);
+
+	ENSURE(m_TextureBase);
+}
+
+bool SOverlayTexturedLine::IsVisibleInFrustum(const CFrustum& frustum) const
+{
+	// If we don't have render data, we don't have actual bounds and we need
+	// to calculate them on a prerendering stage.
+	if (!m_RenderData)
+		return true;
+	return m_RenderData->IsVisibleInFrustum(frustum);
+}

@@ -1,0 +1,15 @@
+{
+	"type": "module",
+	"devDependencies": {
+		"@stylistic/eslint-plugin": "^4.4.0",
+		"eslint": "^9.27.0",
+		"eslint-plugin-brace-rules": "^0.1.6"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"scripts": {
+		"lint": "eslint",
+		"lint:fix": "eslint --fix"
+	}
+}
