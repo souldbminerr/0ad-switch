@@ -96,7 +96,6 @@ macos_arch = "x86_64"
 -- the components that can't run on a homebrew console.
 if _OPTIONS["switch"] then
 	_OPTIONS["without-atlas"] = ""          -- wxWidgets editor: no desktop GUI
-	_OPTIONS["without-lobby"] = ""          -- gloox MP lobby: not ported
 	_OPTIONS["without-tests"] = ""          -- cxxtest host runner
 	_OPTIONS["without-miniupnpc"] = ""      -- UPnP port-forwarding: n/a
 	_OPTIONS["without-dap-interface"] = ""  -- debug-adapter IPC: n/a

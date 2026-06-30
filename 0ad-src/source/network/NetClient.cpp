@@ -52,7 +52,10 @@
 #include <js/TracingAPI.h>
 #include <map>
 #include <memory>
+#include <new>
+#include <pthread.h>
 #include <sstream>
+#include <system_error>
 #include <utility>
 
 /**
@@ -324,10 +327,12 @@ void CNetClient::DestroyConnection()
 	if (m_Session)
 		m_Session->Shutdown();
 
-	if (m_PollingThread.joinable())
-		// Use detach() over join() because we don't want to wait for the session
-		// (which may be polling or trying to send messages).
-		m_PollingThread.detach();
+	if (m_PollingThread.joinable()) {
+		pthread_detach(m_PollingThread.native_handle());
+		static_assert(sizeof(std::thread) == sizeof(pthread_t),
+			"std::thread is expected to wrap a single pthread_t on this toolchain");
+		new (&m_PollingThread) std::thread();
+	}
 
 	// The polling thread will cleanup the session on its own,
 	// mark it as nullptr here so we know we're done using it.

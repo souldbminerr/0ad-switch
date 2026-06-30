@@ -20,7 +20,7 @@ LDFLAGS="$LDSPECS -g $ARCH -Wl,-z,notext -Wl,-z,nopack-relative-relocs"
 
 ENGINE_LIBS="-lmocks_real -lnetwork -lrlinterface -ltinygettext -llobby -lsimulation2 -lscriptinterface -lengine -lgraphics -latlas -lgui -llowlevel -lgladwrapper -lmongoose"
 SM_LIBS="-ljs_static -ljsrust -lswitchextra"
-PORTLIB_LINK="-lSDL2 -lEGL -lglapi -ldrm_nouveau -lxml2 -lenet -lcurl -licui18n -licuuc -licudata -lsodium -lfmt -lfreetype -lbz2 -lpng16 -lz -lharfbuzz -lopenal -lvorbisfile -lvorbis -logg"
+PORTLIB_LINK="-lSDL2 -lEGL -lglapi -ldrm_nouveau -lxml2 -lenet -lcurl -lgloox -lmbedtls -lmbedx509 -lmbedcrypto -licui18n -licuuc -licudata -lsodium -lfmt -lfreetype -lbz2 -lpng16 -lz -lharfbuzz -lopenal -lvorbisfile -lvorbis -logg"
 
 echo "=== compiling main.o (rebuilt if main.cpp changed) ==="
 ( cd "$ROOT/build/workspaces/switch" && \
@@ -47,10 +47,22 @@ echo "=== compiling keyboard shim ==="
 aarch64-none-elf-gcc $ARCH -D__SWITCH__ -D_GNU_SOURCE -O2 \
 	-I"$LIBNX/include" -I"$PORTLIBS/include" -c "$KEYBOARD_SRC" -o "$KEYBOARD_O"
 
+NET_SRC="$ROOT/build/switch/src/switch_net.c"
+NET_O="$ROOT/build/workspaces/switch/obj/switch_net.o"
+echo "=== compiling net shim (socket init for lobby + LAN) ==="
+aarch64-none-elf-gcc $ARCH -D__SWITCH__ -D_GNU_SOURCE -O2 \
+	-I"$LIBNX/include" -I"$PORTLIBS/include" -c "$NET_SRC" -o "$NET_O"
+
+SYSINFO_SRC="$ROOT/build/switch/src/switch_sysinfo.c"
+SYSINFO_O="$ROOT/build/workspaces/switch/obj/switch_sysinfo.o"
+echo "=== compiling sysinfo shim (firmware/AMS version for user report) ==="
+aarch64-none-elf-gcc $ARCH -D__SWITCH__ -D_GNU_SOURCE -O2 \
+	-I"$LIBNX/include" -I"$PORTLIBS/include" -c "$SYSINFO_SRC" -o "$SYSINFO_O"
+
 OUT="$ROOT/binaries/system/pyrogenesis"
 echo "=== linking pyrogenesis.elf ==="
 aarch64-none-elf-g++ $LDFLAGS -Wl,--wrap=pthread_setname_np \
-	"$OBJ/main.o" "$COMPAT_O" "$AFFINITY_O" "$KEYBOARD_O" \
+	"$OBJ/main.o" "$COMPAT_O" "$AFFINITY_O" "$KEYBOARD_O" "$NET_O" "$SYSINFO_O" \
 	-L"$SYS" -L"$SMLIBS" -L"$PORTLIBS/lib" -L"$LIBNX/lib" \
 	-Wl,--start-group $ENGINE_LIBS $SM_LIBS -Wl,--end-group \
 	$PORTLIB_LINK \

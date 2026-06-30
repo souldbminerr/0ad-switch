@@ -1,0 +1,27 @@
+/*
+  Hand-written config.h.unix for the 0 A.D. Nintendo Switch cross-build of gloox.
+
+  gloox normally generates this via autotools/configure. We don't run configure
+  for the Switch cross-build, so we hard-set only the features available on
+  devkitPro/libnx. Undefined HAVE_* macros are treated as "not available" by the
+  source, exactly as autotools would do.
+*/
+
+#ifndef GLOOX_SWITCH_CONFIG_H_UNIX
+#define GLOOX_SWITCH_CONFIG_H_UNIX
+
+/* TLS: only mbedTLS is available on the Switch (see tlsmbedtls.cpp). */
+#define HAVE_MBEDTLS 1
+
+/* Networking: libnx/newlib provide BSD sockets + getaddrinfo (A-record host
+   resolution). No resolver library (res_query), so XMPP SRV lookups are skipped
+   and gloox connects to the configured server host directly -- which is what the
+   0 A.D. lobby does. */
+#define HAVE_GETADDRINFO 1
+#define HAVE_SETSOCKOPT 1
+
+/* Threads + atomics from the GCC/devkitPro runtime. */
+#define HAVE_PTHREAD 1
+#define HAVE_GCC_ATOMIC_BUILTINS 1
+
+#endif /* GLOOX_SWITCH_CONFIG_H_UNIX */

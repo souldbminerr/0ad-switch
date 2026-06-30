@@ -25,7 +25,7 @@ int __wrap_pthread_setname_np(pthread_t thread, const char *name) {
   const int r = __real_pthread_setname_np(thread, name);
   if (name && strstr(name, "glthread")) {
     const u64 cm = switch_process_coremask();
-    const int pref = (cm & (1ull << 2)) ? 2 : (int)__builtin_ctzll(cm);
+    const int pref = (cm & (1ull << 1)) ? 1 : (int)__builtin_ctzll(cm);
     svcSetThreadCoreMask(CUR_THREAD_HANDLE, pref, cm);
     g_switchGlthreadPinned = 1;
   }

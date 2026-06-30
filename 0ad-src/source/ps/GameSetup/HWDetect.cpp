@@ -60,6 +60,12 @@
 #include "scriptinterface/StructuredClone.h"
 #include "soundmanager/ISoundManager.h"
 
+#if OS_SWITCH
+// Implemented in build/switch/src/switch_sysinfo.c
+extern "C" int switchGetFirmwareVersion(char* out, unsigned long outSize);
+extern "C" int switchGetAtmosphereVersion(char* out, unsigned long outSize);
+#endif
+
 #include <SDL_cpuinfo.h>
 #include <SDL_version.h>
 #include <SDL_video.h>
@@ -386,13 +392,21 @@ void RunHardwareDetection(bool writeSystemInfoBeforeDetection, Renderer::Backend
 	Script::SetProperty(rq, settings, "build_opengles", CONFIG2_GLES);
 
 	Script::SetProperty(rq, settings, "build_datetime", std::string(__DATE__ " " __TIME__));
+#if OS_SWITCH
+	Script::SetProperty(rq, settings, "build_version", std::string("release-28-nx"));
+#else
 	Script::SetProperty(rq, settings, "build_version", std::wstring(build_version));
+#endif
 
 	Script::SetProperty(rq, settings, "build_msc", (int)MSC_VERSION);
 	Script::SetProperty(rq, settings, "build_gcc", (int)GCC_VERSION);
 	Script::SetProperty(rq, settings, "build_clang", (int)CLANG_VERSION);
 
+#if OS_SWITCH
+	Script::SetProperty(rq, settings, "gfx_card", std::string("NVIDIA GM20B"));
+#else
 	Script::SetProperty(rq, settings, "gfx_card", device->GetName());
+#endif
 	Script::SetProperty(rq, settings, "gfx_drv_ver", device->GetDriverInformation());
 #if CONFIG2_AUDIO
 	if (g_SoundManager)
@@ -415,10 +429,23 @@ void RunHardwareDetection(bool writeSystemInfoBeforeDetection, Renderer::Backend
 	Script::SetProperty(rq, settings, "video_desktop_bpp", g_VideoMode.GetDesktopBPP());
 	Script::SetProperty(rq, settings, "video_desktop_freq", g_VideoMode.GetDesktopFreq());
 
+#if OS_SWITCH
+	{
+		char fw[64] = {0}, ams[32] = {0};
+		std::string osVersion = (switchGetFirmwareVersion(fw, sizeof(fw)) == 0 && fw[0]) ? fw : "unknown";
+		if (switchGetAtmosphereVersion(ams, sizeof(ams)) == 0 && ams[0])
+			osVersion += " (AMS " + std::string(ams) + ")";
+		Script::SetProperty(rq, settings, "uname_sysname", std::string("Horizon"));
+		Script::SetProperty(rq, settings, "uname_release", osVersion);
+		Script::SetProperty(rq, settings, "uname_version", osVersion);
+		Script::SetProperty(rq, settings, "uname_machine", std::string("aarch64"));
+	}
+#else
 	Script::SetProperty(rq, settings, "uname_sysname", std::string(un.sysname));
 	Script::SetProperty(rq, settings, "uname_release", std::string(un.release));
 	Script::SetProperty(rq, settings, "uname_version", std::string(un.version));
 	Script::SetProperty(rq, settings, "uname_machine", std::string(un.machine));
+#endif
 
 #if OS_LINUX
 	{
@@ -431,7 +458,11 @@ void RunHardwareDetection(bool writeSystemInfoBeforeDetection, Renderer::Backend
 	}
 #endif
 
+#if OS_SWITCH
+	Script::SetProperty(rq, settings, "cpu_identifier", std::string("NVIDIA Tegra X1 ARM-Cortex A57"));
+#else
 	Script::SetProperty(rq, settings, "cpu_identifier", std::string(cpu_IdentifierString()));
+#endif
 	Script::SetProperty(rq, settings, "cpu_frequency", os_cpu_ClockFrequency());
 	Script::SetProperty(rq, settings, "cpu_pagesize", (u32)os_cpu_PageSize());
 	Script::SetProperty(rq, settings, "cpu_largepagesize", (u32)os_cpu_LargePageSize());

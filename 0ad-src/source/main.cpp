@@ -1002,13 +1002,13 @@ static void RunGameOrAtlas(const std::span<const char* const> argv)
 // The body of main(), run on a dedicated thread on Switch (see main() below).
 static int s_switchArgc;
 static char** s_switchArgv;
+// Pins the calling thread to a preferred core (build/switch/src/switch_thread_affinity.c).
+extern "C" void switchPinThisThread(int preferred);
+
 static void* SwitchEngineThread(void*)
 {
-	// 0 A.D. is draw-call-bound on the Switch: the GL backend re-specifies vertex
-	// attributes per draw with no VAO, and nouveau's per-GL-call CPU cost is high,
-	// so frame time scales with the number of visible models. Enable Mesa's threaded
-	// dispatch (glthread) so all that driver work is offloaded to a worker thread on
-	// one of the otherwise-idle cores. Must be set before the GL context is created.
+	switchPinThisThread(2);
+
 	setenv("MESA_GLTHREAD", "true", 1);
 
 	EarlyInit();	// must come at beginning of main
