@@ -8,7 +8,7 @@ SYS="$ROOT/binaries/system"                                         # engine .a 
 OBJ="$ROOT/build/workspaces/switch/obj/pyrogenesis_Release"        # main.o
 LIBNX="$DEVKITPRO/libnx"
 PORTLIBS="$DEVKITPRO/portlibs/switch"
-SMLIBS="${SMLIBS:-/spidermonkey-NX/switch-build/libs/lib}"
+SMLIBS="${SMLIBS:-$ROOT/../libs}"   # libjs_static.a, libjsrust.a, libswitchextra.a (repo-root /libs)
 
 ARCH="-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE"
 
