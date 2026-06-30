@@ -191,7 +191,12 @@ void QuitEngine(int exitStatus)
 
 void RestartEngine()
 {
+#if OS_SWITCH
+	// Restart will crash on Switch
+	g_Shutdown = ShutdownType::Quit;
+#else
 	g_Shutdown = ShutdownType::Restart;
+#endif
 }
 
 // main app message handler
@@ -1046,7 +1051,9 @@ int main(int argc, char* argv[])
 	if (pthread_create(&thread, &attr, SwitchEngineThread, nullptr) == 0)
 		pthread_join(thread, nullptr);
 	pthread_attr_destroy(&attr);
-	return g_ExitStatus;
+
+	// Avoid crash
+	std::_Exit(g_ExitStatus);
 #endif
 
 #if OS_UNIX
